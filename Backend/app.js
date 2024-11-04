@@ -17,12 +17,12 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 // Routes 
-
+import authRoute from "./routes/auth.route.js";
 
 
 // Endpoints
 
-
+app.use("/api/auth", authRoute);
 
 
 export default app;
