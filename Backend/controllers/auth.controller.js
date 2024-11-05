@@ -2,7 +2,9 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import fs from "fs";
-import cloudinary from "../utils/cloudinaryService.js";
+import cloudinary from "../services/cloudinaryService.js";
+import { generateOtp } from '../utils/otpGenerator.js';
+import { sendOtp } from '../services/emailService.js';
 
 const generateTokens = (userId) => {
     const accessToken = jwt.sign(
@@ -215,9 +217,78 @@ const refreshAccessToken = (req, res) => {
 
 
 
+// Forget Password Controller 
+
+
+const forgetPassword = async (req, res) => {
+
+    const { email } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const otp = generateOtp();
+        user.otp = otp;
+        user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
+        await user.save();
+
+        await sendOtp(email, otp);
+        res.status(200).json({ message: 'OTP sent to your email', redirect: '/verify-otp' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred in forget password :' });
+    }
+}
+
+
+const verifyOtp = async (req, res) => {
+    
+    const { email, otp } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user || user.otp !== otp || user.otpExpiry < new Date()) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+
+        user.otp = null;
+        user.otpExpiry = null;
+        await user.save();
+
+        res.status(200).json({ message: 'OTP verified successfully', redirect: '/reset-password' });
+    } catch (error) {
+        res.status(500).json({ message: 'An error occurred' });
+    }
+}
+
+
+const resetPassword = async (req, res) => {
+    
+    const { email, newPassword } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' }); 
+        }
+
+        user.password = newPassword; 
+        await user.save(); // The pre-save middleware will hash the password
+
+        res.status(200).json({ message: 'Password reset successful' });
+    } catch (error) {
+        res.status(500).json({ message: 'An error occurred' });
+    }
+}
+
+
 export {
     register,
     login,
     logout,
     refreshAccessToken,
+
+    forgetPassword,
+    verifyOtp,
+    resetPassword,
 }

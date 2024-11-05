@@ -33,6 +33,12 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "https://res.cloudinary.com/dm25ounxp/image/upload/v1730745160/d32z9z03zp63k7clkvst.png" // cloudinary link for profile image  
     },
+    otp: { 
+        type: String,
+    },
+    otpExpiry: { 
+        type: Date,
+    }
     },
 {
     timestamps: true
