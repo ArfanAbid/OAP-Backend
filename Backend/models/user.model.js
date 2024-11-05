@@ -24,10 +24,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    userType: {
+    userType: { // i think is not really useful let see it later :)
         type: String,
-        enum: ['Speaker', 'Company','Speaker'],
+        enum: ['Speaker', 'Company','Seeker'],
         required: true
+    },
+    userRole: {
+        type: String,
+        enum: ['Admin', 'User'],
+        default: 'User'
     },
     profileImage: {
         type: String,
