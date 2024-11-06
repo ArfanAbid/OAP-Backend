@@ -1,4 +1,5 @@
 import jobModel from "../models/job.model.js";
+import cloudinary from "../services/cloudinaryService.js";
 
 
 // Admin Controller 
@@ -11,7 +12,6 @@ const createJob = async (req, res) => {
         salary,
         company,
         deadlineDate,
-        uploadedImage,
         contactEmail,
         tags,
         requiredSkills,
@@ -21,6 +21,17 @@ const createJob = async (req, res) => {
         return res.status(400).json({ message: 'All required fields must be filled.' });
     }
     try {
+        let result="";
+        if(req.file) {
+                result = await cloudinary.uploader.upload(req.file.path, {
+                folder: "job_images",
+                });
+            // Delete the file from server after uploading to Cloudinary
+            fs.unlink(req.file.path, (err) => {
+                if (err) console.error("Error deleting file:", err);
+            });
+        }
+        
         const job = await jobModel.create({
             title,
             description,
@@ -29,7 +40,7 @@ const createJob = async (req, res) => {
             salary,
             company,
             deadlineDate,
-            uploadedImage,
+            uploadedImage: result.secure_url?result.secure_url:"",
             contactEmail,
             tags,
             requiredSkills,
@@ -54,7 +65,6 @@ const updateJob = async (req, res) => {
         salary,
         company,
         deadlineDate,
-        uploadedImage,
         contactEmail,
         tags,
         requiredSkills,
@@ -65,6 +75,18 @@ const updateJob = async (req, res) => {
         if (!job) {
             return res.status(404).json({ message: 'Job not found' });
         }
+
+        let result = "";
+        if (req.file) {
+                result = await cloudinary.uploader.upload(req.file.path, {
+                folder: "job_images",
+                });
+            // Delete the file from server after uploading to Cloudinary
+            fs.unlink(req.file.path, (err) => {
+                if (err) console.error("Error deleting file:", err);
+            });
+        }   
+
         job.title = title || job.title;
         job.description = description || job.description;
         job.location = location || job.location;
@@ -72,7 +94,7 @@ const updateJob = async (req, res) => {
         job.salary = salary || job.salary;
         job.company = company || job.company;
         job.deadlineDate = deadlineDate ? new Date(deadlineDate) : job.deadlineDate;
-        job.uploadedImage = uploadedImage || job.uploadedImage;
+        job.uploadedImage = result?.secure_url || job.uploadedImage;
         job.contactEmail = contactEmail || job.contactEmail;
         job.tags = tags || job.tags;
         job.requiredSkills = requiredSkills || job.requiredSkills;
@@ -95,6 +117,7 @@ const deleteJob = async (req, res) => {
         if (!job) {
             return res.status(404).json({ message: 'Job not found' });
         }
+        await cloudinary.uploader.destroy(job.uploadedImage);
         await job.remove();
         res.status(200).json({ message: 'Job deleted successfully' });
     } catch (error) {
@@ -124,20 +147,69 @@ const updateJobStatus = async (req, res) => {
     }
 };
 
-const getAllJobs = async (req, res) => {
+const getAllAdminJobs = async (req, res) => {
     try {
         const jobs = await jobModel.find();
+        res.status(200).json({ message: 'Jobs fetched successfully through Admin', jobs });
+    } catch (error) {
+        console.log("Error fetching jobs through Admin:", error);
+        res.status(500).json({ message: 'Error fetching jobs through Admin', error: error.message });
+    }
+};
+
+
+// Unauthorized User Controller (Visitor)
+
+const openJobs = async (req, res) => {
+    try {
+        const jobs = await jobModel.find({ status: 'Open' });
         res.status(200).json({ message: 'Jobs fetched successfully', jobs });
+    } catch (error) {
+        console.log("Error fetching OpenJobs:", error);
+        res.status(500).json({ message: 'Error fetching openJobs', error: error.message });
+    }
+};
+
+const alljobs =  async (req, res) => {
+    try {
+        const jobs = await jobModel.find();
+        res.status(200).json({ message: 'Jobss successfully', jobs });
     } catch (error) {
         console.log("Error fetching jobs:", error);
         res.status(500).json({ message: 'Error fetching jobs', error: error.message });
+}
+};
+
+
+
+// Authorized User Controller
+
+
+const jobdetails = async (req, res) => {
+    const { jobId } = req.params;
+    try {
+        const job = await jobModel.findById(jobId);
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+        res.status(200).json({ message: 'Job details fetched successfully', job });
+    } catch (error) {
+        console.log("Error fetching job details:", error);
+        res.status(500).json({ message: 'Error fetching job details', error: error.message });
     }
 };
+
+
 
 export {
     createJob,
     updateJob,
     deleteJob,
     updateJobStatus,
-    getAllJobs,
+    getAllAdminJobs,
+
+    openJobs,
+    alljobs,
+    
+    jobdetails,
 }
