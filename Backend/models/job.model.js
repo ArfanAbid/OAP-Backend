@@ -54,7 +54,7 @@ const jobSchema = new mongoose.Schema({
     },
     uploadedImage: {
         type: String,
-        default: 'https://res.cloudinary.com/dm25ounxp/image/upload/v1730745160/d32z9z03zp63k7clkvst.png'
+        default: 'https://res.cloudinary.com/dm25ounxp/image/upload/v1730921886/bdocmie5i12lupkwm0jz.png'
     },
     status: {
         type: String,
