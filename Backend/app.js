@@ -19,12 +19,14 @@ app.use(cookieParser());
 // Routes 
 import authRoute from "./routes/auth.route.js";
 import jobRoute from "./routes/job.route.js";
+import subscriptionRoute from "./routes/subscription.route.js";
 
 
 // Endpoints
 
 app.use("/api/auth", authRoute);
 app.use("/api/job", jobRoute);
+app.use("/api/subscription", subscriptionRoute);
 
 
 export default app;

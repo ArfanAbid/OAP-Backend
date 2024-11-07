@@ -36,7 +36,7 @@ router.get("/open-jobs",openJobs);// tobe listed in featured jobs
 router.get("/job-details/:jobId",authenticateUser,authorizeUser,jobdetails);
 
 
-// TODO:Subscribe for notification about new job 
+// TODO: Filtering Jobs
 
 
 

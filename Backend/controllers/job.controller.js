@@ -1,12 +1,18 @@
 import jobModel from "../models/job.model.js";
 import cloudinary from "../services/cloudinaryService.js";
 
+import Subscription from "../models/subscription.model.js";
+import userModel from "../models/user.model.js";
+
 
 // Admin Controller 
+
+
+// Admin Controller for creating a job posting and notifying subscribers
 const createJob = async (req, res) => {
     const {
         title,
-        description,    
+        description,
         location,
         type,
         salary,
@@ -17,21 +23,23 @@ const createJob = async (req, res) => {
         requiredSkills,
     } = req.body;
 
+    // Validation for required fields
     if (!title || !description || !location || !type || !salary || !company || !deadlineDate || !contactEmail) {
         return res.status(400).json({ message: 'All required fields must be filled.' });
     }
+
     try {
-        let result="";
-        if(req.file) {
-                result = await cloudinary.uploader.upload(req.file.path, {
-                folder: "job_images",
-                });
+        // Upload image to Cloudinary if it exists
+        let result = "";
+        if (req.file) {
+            result = await cloudinary.uploader.upload(req.file.path, { folder: "job_images" });
             // Delete the file from server after uploading to Cloudinary
             fs.unlink(req.file.path, (err) => {
                 if (err) console.error("Error deleting file:", err);
             });
         }
-        
+
+        // Create the job in the database
         const job = await jobModel.create({
             title,
             description,
@@ -40,20 +48,41 @@ const createJob = async (req, res) => {
             salary,
             company,
             deadlineDate,
-            uploadedImage: result.secure_url?result.secure_url:"",
+            uploadedImage: result.secure_url ? result.secure_url : "",
             contactEmail,
             tags,
             requiredSkills,
             user: req.user._id, // Admin's user ID
         });
 
-        res.status(201).json({ message: 'Job created successfully', job });
-        } catch (error) {
-        console.log("Error creating job:", error);
+        // Retrieve all logged-in users with notifications enabled
+        const userSubscribers = await userModel.find({ notificationsEnabled: true });
+        
+        // Retrieve non-logged-in email subscribers
+        const emailSubscribers = await Subscription.find({ active: true });
+        
+        // Combine all emails to notify
+        const allEmails = [
+            ...userSubscribers.map(user => user.email),
+            ...emailSubscribers.map(sub => sub.email)
+        ];
+
+        // Send job notifications to each email
+        for (const email of allEmails) {
+            await sendJobNotification(email, {
+                title: job.title,
+                company: job.company,
+                location: job.location,
+                deadlineDate: job.deadlineDate,
+            });
+        }
+
+        res.status(201).json({ message: 'Job created successfully and notifications sent', job });
+    } catch (error) {
+        console.error("Error creating job:", error);
         res.status(500).json({ message: 'Error creating job', error: error.message });
     }
 };
-
 
 const updateJob = async (req, res) => {
     const { jobId } = req.params;

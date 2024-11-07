@@ -43,6 +43,10 @@ const userSchema = new mongoose.Schema({
     },
     otpExpiry: { 
         type: Date,
+    },
+    notificationsEnabled: {// notificationsEnabled field to the User model to track whether the user has subscribed to notifications.So he can get new job posting update
+        type: Boolean,
+        default: true
     }
     },
 {
